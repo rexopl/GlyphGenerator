@@ -47,6 +47,7 @@ html {
 body {
   /* Margin bottom by footer height */
   margin-bottom: 60px;
+  margin-top: 1em;
 }
 
 .footer-container {
@@ -56,4 +57,51 @@ body {
 }
 .footer-container .text-muted {
   margin: 20px 0;
+}
+
+#display {
+  display: grid;
+  grid-template-columns: repeat(16, 57px);
+  grid-column-gap: 1px;
+  grid-row-gap: 1px;
+}
+
+#display .panel-body {
+  line-height: 1px;
+  font-size: 0px;
+  padding: 0;
+}
+
+#display .panel-body .pixel {
+  width: 10px;
+  height: 10px;
+  border: none;
+  margin-right: 1px;
+}
+
+#display .display-panel .btn-sm {
+  padding: 0 4px;
+}
+
+#display .display-panel {
+  position: relative;
+  border: 1px solid #fff;
+}
+
+#display .display-panel .navigation {
+  display: none;
+  position: absolute;
+  flex-direction: row;
+  justify-content: space-between;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+#display .display-panel:hover, #display .display-panel.selected {
+  border-color: #337ab7;
+}
+
+#display .display-panel:hover .navigation {
+  //display: flex;
 }

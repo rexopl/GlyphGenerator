@@ -1,4 +1,7 @@
 var mouseDown = false;
+var selectedPanel = null;
+var mainGrid = null;
+var mainId = null;
 
 $(document).mousedown(function(e) {
   if(e.which == 1)
@@ -9,8 +12,8 @@ $(document).mousedown(function(e) {
 });
 
 $(function() {
-  $('#createBtn').click(createNewGlyph);
-  createNewGlyph();
+  createNewGlyph()
+  createDisplay()
 });
 
 function createNewGlyph() {
@@ -22,7 +25,7 @@ function createNewGlyph() {
           $('<div>').addClass('panel-heading').append(
             $('<strong>').attr('id', 'glyphHeading-' + rand).html('New Glyph')
           ).append(
-            $('<button>').addClass('close').attr('id', 'btnClose-'+rand).html('&times;')
+            //$('<button>').addClass('close').attr('id', 'btnClose-'+rand).html('&times;')
           ).append(
             $('<br>')
           )
@@ -48,6 +51,10 @@ function createNewGlyph() {
                   )
                 ).append(
                   $('<div>').addClass('btn-group config-group').append(
+                    $('<button>').addClass('btn btn-md btn-secondary btn-update-display').html('Update').attr('id', 'btnUpdateDisplay-' + rand)
+                  )
+                ).append(
+                  $('<div>').addClass('btn-group config-group').append(
                     $('<button>').addClass('btn btn-md btn-danger').html('Clear Pixel Grid').attr('id', 'btnClear-' + rand)
                   ).append(
                     $('<button>').addClass('btn btn-md btn-info').html('Invert Pixel Grid').attr('id', 'btnInvert-' + rand)
@@ -69,12 +76,15 @@ function createNewGlyph() {
       )
     )
   )
-);
+  )
+
+  mainGrid = $('#grid-' + rand)
+  mainId = rand
 
   for(let i = 0; i < 8; i++) {
     for(let j = 0; j < 5; j++) {
       $('#grid-' + rand).append(
-        $('<canvas>').addClass('pixel off').attr('id', 'pixel-' + rand + '-' + (j + i * 5)).mousedown(function(e) {
+        $('<canvas>').addClass('pixel off pixel-' + (j + i * 5)).attr('id', 'pixel-' + rand + '-' + (j + i * 5)).mousedown(function(e) {
           if(e.which !== 1) return;
           $(this).toggleClass('on off');
           generateOutput(rand);
@@ -116,8 +126,40 @@ function createNewGlyph() {
      e.preventDefault();
    });
 
-  generateOutput(rand);
+  $('#btnUpdateDisplay-' + rand).click(function() {
+    if (selectedPanel != null) {
+      $(selectedPanel).data('name', $('#glyphName-' + rand).val())
+      $('.pixel', selectedPanel).removeClass('on').addClass('off')
+      for(let y = 0; y < 8; y++) {
+        for(let x = 0; x < 5; x++) {
+          if($('#pixel-' + rand + '-' + (x+y*5)).is('.on') == true) {
+            $('.pixel-' + (x+y*5), selectedPanel).removeClass('off').addClass('on')
+          }
+        }
+      }
+      generateDisplayOutput()
+    }
+  });
 
+  generateOutput(rand);
+}
+
+function createDisplay() {
+  for (let i = 0; i < 2*16; ++i) {
+    addToDisplay();
+  }
+  generateDisplayOutput()
+
+  $('#display').on('click', '.display-panel', function () {
+    $('#display .display-panel').removeClass('selected')
+    if (selectedPanel != this) {
+      selectedPanel = this
+      $(this).addClass('selected')
+    } else {
+      selectedPanel = null
+    }
+    onSelectedChange()
+  })
 }
 
 function randomInt(min,max)
@@ -163,4 +205,64 @@ function escapeHtml(text) {
     return text.replace(/[\"&<>]/g, function (a) {
         return { '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' }[a];
     });
+}
+
+function onSelectedChange() {
+  if (selectedPanel != null) {
+    $('.btn-update-display').removeClass('btn-secondary').addClass('btn-primary')
+    $('.pixel', mainGrid).removeClass('on').addClass('off')
+      for(let y = 0; y < 8; y++) {
+        for(let x = 0; x < 5; x++) {
+          if($('.pixel-' + (x+y*5), selectedPanel).is('.on') == true) {
+            $('.pixel-' + (x+y*5), mainGrid).removeClass('off').addClass('on')
+          }
+        }
+      }
+      $('#glyphName-' + mainId).val($(selectedPanel).data('name') || '')
+  } else {
+    $('.btn-update-display').addClass('btn-secondary').removeClass('btn-primary')
+  }
+  generateOutput(mainId)
+}
+
+function addToDisplay() {
+  const container = $('<div>').addClass('display-panel').append(
+    $('<div>').addClass('navigation').append([
+      $('<button>').addClass('btn btn-sm btn-primary action-prev').html('<'),
+      $('<button>').addClass('btn btn-sm btn-primary action-remove').html('x'),
+      $('<button>').addClass('btn btn-sm btn-primary action-next').html('>')
+    ])
+  )
+  const grid = mainGrid.clone().removeAttr('id')
+  $('.pixel', grid).removeAttr('id')
+  grid.appendTo(container)
+  container.appendTo('#display')
+}
+
+function generateDisplayOutput() {
+  let binary = '';
+  let hex = '';
+  $('#display .display-panel').each(function (panel_idx) {
+    const panel = $(this);
+    const name = panel.data('name') || 'char_' + panel_idx;
+    binary += 'byte ' + name + '[8] = {\n'
+    currentByte = ''
+    currentHex = ''
+    $('.pixel', panel).each(function (pixel_idx) {
+      if (pixel_idx % 5 == 0) {
+        if (pixel_idx != 0) {
+          binary += '\n'
+          currentHex += '0x' + parseInt(currentByte, 2).toString(16) + ', '
+        }
+        binary += '\t0b'
+        currentByte = ''
+      }
+      binary += $(this).is('.on') == true ? '1' : '0'
+      currentByte += $(this).is('.on') == true ? '1' : '0'
+    })
+    currentHex += '0x' + parseInt(currentByte, 2).toString(16)
+    binary += '\n};\n'
+    hex += 'uint8_t ' + name + '[8] = {' + currentHex + '}\n';
+  })
+  $('#display-output').html('<pre>' + binary + '\n' + hex + '</pre>')
 }
